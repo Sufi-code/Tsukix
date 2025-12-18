@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Komorebi • Sanctuary</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Manrope:wght@200;300;400&family=Noto+Serif+JP:wght@200;300;400&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --text-light: #e0e0e0;
+            --text-dim: #888888;
+            --accent: #d4c5b0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Manrope', sans-serif;
+            overflow-x: hidden;
+            cursor: none; /* Custom cursor only */
+        }
+
+        /* --- BACKGROUND LAYERS --- */
+        .fixed-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -5;
+            /* High quality, moody forest */
+            background-image: url('https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=2574&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.4;
+            transform: scale(1.1); /* For slight parallax */
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -3;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            opacity: 0.08;
+            pointer-events: none;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 20%, rgba(0,0,0,1) 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor {
+            position: fixed; top: 0; left: 0;
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+        .cursor-follower {
+            position: fixed; top: 0; left: 0;
+            width: 40px; height: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            pointer-events: none; z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s, width 0.3s, height 0.3s, border-color 0.3s;
+        }
+
+        /* --- LOADER --- */
+        .loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #030303; z-index: 1000;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .loader-text {
+            font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-style: italic; opacity: 0; letter-spacing: 5px;
+        }
+        .loader-bar { width: 0; height: 1px; background: var(--accent); margin-top: 30px; }
+
+        /* --- LAYOUT --- */
+        section {
+            min-height: 100vh; padding: 15vw 5vw;
+            display: flex; flex-direction: column; justify-content: center;
+            position: relative;
+        }
+        .hero { align-items: center; text-align: center; }
+        .content-wrap { position: relative; z-index: 2; }
+        .align-right { align-items: flex-end; text-align: right; }
+        .align-left { align-items: flex-start; text-align: left; }
+        .align-center { align-items: center; text-align: center; }
+
+        /* --- TYPOGRAPHY BEAUTY --- */
+        .jp-title {
+            font-family: 'Noto Serif JP', serif;
+            font-size: clamp(4rem, 12vw, 14rem);
+            font-weight: 900;
+            line-height: 0.9;
+            margin-bottom: 3rem;
+            /* IMAGE CLIPPING FOR TEXTURE */
+            background: url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=2674&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0.7;
+            filter: contrast(1.2) brightness(0.8);
+        }
+
+        .eng-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-style: italic; font-weight: 300;
+            margin-bottom: 2rem;
+            color: var(--text-light);
+            filter: drop-shadow(0 0 20px rgba(212, 197, 176, 0.2));
+        }
+
+        .desc-text {
+            font-size: 1.1rem; max-width: 450px;
+            color: var(--text-dim); line-height: 1.9;
+            letter-spacing: 0.5px; font-weight: 300;
+        }
+
+        .meta-tag {
+            font-size: 0.7rem; text-transform: uppercase;
+            letter-spacing: 6px; color: var(--accent);
+            margin-bottom: 1.5rem; display: block;
+            position: relative;
+        }
+
+        /* --- INTERACTIVE ELEMENTS --- */
+        .magnetic-btn {
+            display: inline-block; margin-top: 50px; padding: 25px 50px;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 100px;
+            color: white; text-transform: uppercase; font-size: 0.75rem;
+            letter-spacing: 3px; background: transparent; cursor: none;
+            position: relative; overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            text-decoration: none; /* For link buttons */
+        }
+        
+        .magnetic-btn::after {
+            content: ''; position: absolute;
+            width: 100%; height: 100%; top: 0; left: 0;
+            background: var(--accent);
+            transform: scaleY(0); transform-origin: bottom;
+            transition: transform 0.5s cubic-bezier(0.7, 0, 0.3, 1);
+            z-index: -1;
+        }
+        .magnetic-btn:hover { color: black; border-color: transparent; }
+        .magnetic-btn:hover::after { transform: scaleY(1); transform-origin: top; }
+
+        /* --- CREDITS SECTION --- */
+        .separator {
+            width: 1px; height: 60px; background: rgba(255,255,255,0.2);
+            margin: 0 auto 30px auto;
+        }
+        .credit-text {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-dim);
+        }
+        .credit-link {
+            margin-top: 20px; padding: 15px 30px; font-size: 0.7rem; color: var(--accent); border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loader">
+        <div class="loader-text">Entrance.</div>
+        <div class="loader-bar"></div>
+    </div>
+
+    <audio id="bgAudio" loop>
+        <source src="./jaudio.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="fixed-bg"></div>
+    <canvas id="particle-canvas"></canvas>
+    <div class="noise-overlay"></div>
+    <div class="vignette"></div>
+
+    <div class="cursor"></div>
+    <div class="cursor-follower"></div>
+
+    <main id="smooth-wrapper">
+        
+        <section class="hero">
+            <div class="content-wrap">
+                <span class="meta-tag">Komorebi Sanctuary</span>
+                <h1 class="eng-title" style="font-size: clamp(4rem, 10vw, 8rem);">木漏れ日</h1>
+                <p class="desc-text">The interplay of light and dark.<br>A digital space for silence.</p>
+                <button class="magnetic-btn" onclick="enterSite()">Begin Journey</button>
+            </div>
+        </section>
+
+        <section class="align-left">
+            <div class="content-wrap">
+                <h2 class="jp-title">一期一会</h2>
+                <span class="meta-tag">Ichigo Ichie</span>
+                <h3 class="eng-title">The singular<br>moment.</h3>
+                <p class="desc-text">Every encounter is unique. It happens only once, never to return. Treat this present moment as the most beautiful treasure.</p>
+            </div>
+        </section>
+
+        <section class="align-right">
+            <div class="content-wrap">
+                <h2 class="jp-title" style="background-position: center right;">花鳥風月</h2>
+                <span class="meta-tag">Kachou Fuugetsu</span>
+                <h3 class="eng-title">Flower, Bird,<br>Wind, Moon.</h3>
+                <p class="desc-text">By observing the simple elegance of nature, we untangle the complexities of the human soul.</p>
+            </div>
+        </section>
+
+        <section class="align-center">
+            <div class="content-wrap">
+                <h2 class="jp-title" style="background-position: bottom center;">侘寂</h2>
+                <span class="meta-tag">Wabi-Sabi</span>
+                <h3 class="eng-title">Imperfect<br>Beauty.</h3>
+                <p class="desc-text">Nothing lasts, nothing is finished, and nothing is perfect. There is profound peace in the worn and the faded.</p>
+            </div>
+        </section>
+
+        <section class="align-left">
+            <div class="content-wrap">
+                <h2 class="jp-title" style="background-position: top left;">幽玄</h2>
+                <span class="meta-tag">Yugen</span>
+                <h3 class="eng-title">Mysterious<br>Depth.</h3>
+                <p class="desc-text">The beauty that is suggested rather than stated. A feeling of the universe that cannot be put into words.</p>
+            </div>
+        </section>
+
+        <section class="align-center" style="min-height: 60vh;">
+            <div class="content-wrap">
+                <div class="separator"></div>
+                <p class="credit-text">Curated with intention by</p>
+                <a href="https://t.me/Sufi1IQ" target="_blank" class="magnetic-btn credit-link">@Sufi1IQ</a>
+                <br>
+                <button class="magnetic-btn" style="margin-top: 20px; border: none; opacity: 0.5;" onclick="lenis.scrollTo(0)">Return to Silence</button>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /* 1. ATMOSPHERIC PARTICLES */
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        class Particle {
+            constructor() { this.reset(true); }
+            reset(initial = false) {
+                this.x = Math.random() * canvas.width;
+                this.y = initial ? Math.random() * canvas.height : canvas.height + 10;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speed = Math.random() * 0.2 + 0.05; // Very slow
+                this.opacity = Math.random() * 0.5;
+                this.fade = Math.random() * 0.002 + 0.001;
+            }
+            update() {
+                this.y -= this.speed;
+                if (this.y < -10) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        for (let i = 0; i < 60; i++) particles.push(new Particle());
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* 2. LENIS SMOOTH SCROLL */
+        const lenis = new Lenis({ duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true });
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+        requestAnimationFrame(raf);
+
+        /* 3. GSAP ANIMATIONS */
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Preloader
+        const tl = gsap.timeline();
+        tl.to(".loader-bar", { width: "150px", duration: 1.5, ease: "power3.inOut" })
+          .to(".loader-text", { opacity: 1, duration: 1 }, "-=1")
+          .to(".loader", { y: "-100%", duration: 1.2, ease: "expo.inOut", delay: 0.5 });
+
+        function enterSite() {
+            document.getElementById("bgAudio").play().catch(() => {});
+            lenis.scrollTo(window.innerHeight, { duration: 2.5 });
+        }
+
+        // Content Reveals
+        document.querySelectorAll('.content-wrap').forEach(item => {
+            gsap.fromTo(item.children, 
+                { y: 50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.5, stagger: 0.1, ease: "power3.out",
+                  scrollTrigger: { trigger: item, start: "top 80%" } }
+            );
+        });
+
+        // Parallax Background & Text
+        gsap.to('.fixed-bg', { yPercent: 15, ease: 'none', scrollTrigger: { trigger: 'body', scrub: true }});
+        document.querySelectorAll('.jp-title').forEach(el => {
+            gsap.to(el, { y: -80, ease: "none", scrollTrigger: { trigger: el, scrub: true } });
+        });
+
+        /* 4. MAGNETIC CURSOR */
+        const cursor = document.querySelector('.cursor');
+        const follower = document.querySelector('.cursor-follower');
+        let mouseX = 0, mouseY = 0, posX = 0, posY = 0;
+
+        document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+
+        gsap.ticker.add(() => {
+            posX += (mouseX - posX) * 0.12; posY += (mouseY - posY) * 0.12;
+            gsap.set(cursor, { x: mouseX, y: mouseY });
+            gsap.set(follower, { x: posX, y: posY });
+        });
+
+        document.querySelectorAll('.magnetic-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                gsap.to(cursor, { scale: 0 });
+                gsap.to(follower, { scale: 2.5, borderColor: 'var(--accent)' });
+            });
+            btn.addEventListener('mouseleave', () => {
+                gsap.to(cursor, { scale: 1 });
+                gsap.to(follower, { scale: 1, borderColor: 'rgba(255,255,255,0.2)' });
+                gsap.to(btn, { x: 0, y: 0 });
+            });
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                gsap.to(btn, { x: x * 0.4, y: y * 0.4, duration: 0.3 });
+            });
+        });
+    </script>
+</body>
+</html>
